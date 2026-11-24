@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Essensuals Scratch & Save</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column built for a phone tap-through from a Meta ad. Masthead, six foil boxes, result panel with WhatsApp action, offer ladder, terms. */
+:root {
+  --bg: #f6f3ec;
+  --surface: #ffffff;
+  --fg: #17150f;
+  --muted: #6a6457;
+  --line: #ddd5c4;
+  --ink: #17150f;
+  --on-ink: #f6f3ec;
+  --gold: #a8812f;
+  --wa: #14803c;
+  --on-wa: #ffffff;
+  --font-display: "Bodoni Moda", "Didot", Georgia, serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121109;
+    --surface: #1d1b14;
+    --fg: #f4efe3;
+    --muted: #aaa391;
+    --line: #38342a;
+    --ink: #f4efe3;
+    --on-ink: #121109;
+    --gold: #d9b865;
+    --wa: #2fb862;
+    --on-wa: #08170d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121109;
+  --surface: #1d1b14;
+  --fg: #f4efe3;
+  --muted: #aaa391;
+  --line: #38342a;
+  --ink: #f4efe3;
+  --on-ink: #121109;
+  --gold: #d9b865;
+  --wa: #2fb862;
+  --on-wa: #08170d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 40px;
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+.masthead { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 9vw, 3.2rem);
+  line-height: 1.04;
+  margin: 0;
+  text-wrap: balance;
+}
+.lede { margin: 0; color: var(--muted); max-width: 52ch; }
+.lede strong { color: var(--fg); font-weight: 700; }
+
+.status {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 500;
+  padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+.dot { width: 8px; height: 8px; background: var(--gold); flex: none; }
+.status.done .dot { background: var(--wa); }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.card {
+  position: relative;
+  aspect-ratio: 1 / 1.08;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  outline-offset: 3px;
+}
+.card:focus-visible { outline: 2px solid var(--gold); }
+.face {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  text-align: center; padding: 10px;
+}
+.num { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.4rem, 11vw, 3.4rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.off { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); }
+.min { margin-top: 8px; font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.min b { color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+canvas.foil {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  touch-action: none; cursor: crosshair;
+  transition: opacity 0.5s ease;
+}
+.card.revealed canvas.foil { opacity: 0; pointer-events: none; }
+.card.locked canvas.foil { opacity: 0.22; pointer-events: none; cursor: not-allowed; }
+.card.locked .face { opacity: 0; }
+.card.winner { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+
+.result {
+  display: none; flex-direction: column; gap: 14px;
+  background: var(--ink); color: var(--on-ink);
+  padding: 22px 20px; border-radius: 4px;
+}
+.result.show { display: flex; }
+.result h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 6.5vw, 2.1rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+.result p { margin: 0; opacity: 0.85; }
+.code { font-size: 14px; border: 1px dashed currentColor; padding: 10px 12px; border-radius: 4px; }
+.code span { font-weight: 700; letter-spacing: 0.12em; font-size: 16px; user-select: all; }
+.wa-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 12px 18px;
+  background: var(--wa); color: var(--on-wa);
+  font-weight: 700; font-size: 16px; text-decoration: none; border-radius: 4px;
+}
+.wa-btn:focus-visible { outline: 3px solid var(--on-ink); outline-offset: 2px; }
+.wa-btn svg { width: 22px; height: 22px; flex: none; fill: currentColor; }
+.numline { font-size: 14px; opacity: 0.85; }
+.numline span { font-weight: 700; letter-spacing: 0.04em; user-select: all; font-variant-numeric: tabular-nums; }
+
+.ended { display: none; padding: 22px 20px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+.ended h2 { font-family: var(--font-display); margin: 0 0 6px; }
+.ended p { margin: 0; color: var(--muted); }
+
+.ladder h2 { font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 4px; }
+.ladder p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.ladder table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ladder th, .ladder td { text-align: left; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.ladder th { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.ladder td:last-child, .ladder th:last-child { text-align: right; }
+.ladder td:last-child { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; }
+
+.terms { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.terms p { margin: 0; }
+.terms .place { color: var(--fg); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) { canvas.foil { transition: none; } }
+html{color-scheme:light}body{margin:0}
+img{max-width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Toni&amp;Guy Essensuals &middot; West Mambalam</div>
+    <h1>Scratch a box. Save up to 30%.</h1>
+    <p class="lede">Six boxes, six different offers. Pick <strong>one</strong>, scratch it, and message us on WhatsApp to claim it on any service. <strong>One scratch per person.</strong> Valid until 30 November.</p>
+  </header>
+
+  <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">You get one scratch. Pick any one box and scratch it with your finger.</span></div>
+
+  <section class="grid" id="grid" aria-label="Scratch boxes"></section>
+
+  <section class="result" id="result" aria-live="polite">
+    <h2 id="resultTitle"></h2>
+    <p id="resultBody"></p>
+    <div class="code">Your offer code: <span id="offerCode"></span></div>
+    <a class="wa-btn" id="waBtn" href="#" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.55-3.7 8.23-8.23 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.29Z"/></svg>
+      Message us on WhatsApp
+    </a>
+    <div class="numline">WhatsApp number: <span>+91 90944 33444</span></div>
+  </section>
+
+  <section class="ended" id="ended">
+    <h2>This offer has ended</h2>
+    <p>The scratch card ran until 30 November 2026. Message us on WhatsApp at +91 90944 33444 to ask about current offers.</p>
+  </section>
+
+  <section class="ladder">
+    <h2>How your offer works</h2>
+    <p>The discount depends on your final bill value.</p>
+    <table>
+      <thead><tr><th scope="col">Bill value</th><th scope="col">You save</th></tr></thead>
+      <tbody id="ladderBody"></tbody>
+    </table>
+  </section>
+
+  <footer class="terms">
+    <p class="place">Toni&amp;Guy Essensuals, West Mambalam</p>
+    <p>Valid on any service until 30 November 2026. One scratch per person and one offer per WhatsApp number. The offer is confirmed using your WhatsApp message and offer code, and applies only when your bill reaches the minimum value shown on your box.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var WA_NUMBER = "919094433444";
+  var END = new Date("2026-11-30T23:59:59+05:30");
+  var KEY = "essensuals-scratch-nov-2026";
+  var TIERS = [
+    { off: 5, min: 999 }, { off: 10, min: 1999 }, { off: 15, min: 2999 },
+    { off: 20, min: 3999 }, { off: 25, min: 4999 }, { off: 30, min: 5999 }
+  ];
+  var THRESHOLD = 0.45;
+
+  var gridEl = document.getElementById("grid");
+  var statusEl = document.getElementById("status");
+  var statusText = document.getElementById("statusText");
+  var resultEl = document.getElementById("result");
+
+  function fmt(n) { return n.toLocaleString("en-IN"); }
+
+  // Offer ladder (always in ascending order)
+  var ladderBody = document.getElementById("ladderBody");
+  TIERS.forEach(function (t) {
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>₹" + fmt(t.min) + " or more</td><td>" + t.off + "% off</td>";
+    ladderBody.appendChild(tr);
+  });
+
+  if (new Date() > END) {
+    gridEl.style.display = "none";
+    statusEl.style.display = "none";
+    document.getElementById("ended").style.display = "block";
+    return;
+  }
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  function loadSaved() {
+    try { var v = localStorage.getItem(KEY); if (v) return JSON.parse(v); } catch (e) {}
+    try {
+      var m = document.cookie.match(new RegExp("(?:^|; )" + KEY + "=([^;]*)"));
+      if (m) return JSON.parse(decodeURIComponent(m[1]));
+    } catch (e) {}
+    return null;
+  }
+  function persist(obj) {
+    var str = JSON.stringify(obj);
+    try { localStorage.setItem(KEY, str); } catch (e) {}
+    try { document.cookie = KEY + "=" + encodeURIComponent(str) + "; expires=Tue, 01 Dec 2026 00:00:00 GMT; path=/; SameSite=Lax"; } catch (e) {}
+  }
+  function makeCode() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", out = "ES-";
+    for (var i = 0; i < 5; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+    return out;
+  }
+  var saved = loadSaved();
+  var offerCode = null;
+
+  var chosen = null;
+  var cards = [];
+
+  shuffle(TIERS).forEach(function (tier, i) {
+    var card = document.createElement("div");
+    card.className = "card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", "Scratch box " + (i + 1));
+    card.innerHTML =
+      '<div class="face"><div class="num">' + tier.off + '%</div><div class="off">Off</div>' +
+      '<div class="min">on a bill of <b>₹' + fmt(tier.min) + '</b> or more</div></div>' +
+      '<canvas class="foil"></canvas>';
+    gridEl.appendChild(card);
+    var entry = { card: card, canvas: card.querySelector("canvas"), tier: tier, started: false, last: null, lastCheck: 0 };
+    cards.push(entry);
+    bind(entry);
+  });
+
+  function paintFoil(entry) {
+    var c = entry.canvas;
+    var dpr = window.devicePixelRatio || 1;
+    var r = c.getBoundingClientRect();
+    c.width = Math.max(1, Math.round(r.width * dpr));
+    c.height = Math.max(1, Math.round(r.height * dpr));
+    var ctx = c.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+    var w = r.width, h = r.height;
+    var g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, "#cbb27a");
+    g.addColorStop(0.28, "#ecdcaa");
+    g.addColorStop(0.5, "#b99a55");
+    g.addColorStop(0.74, "#e6d49b");
+    g.addColorStop(1, "#bfa263");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    for (var k = 0; k < 420; k++) {
+      ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.20)" : "rgba(90,66,16,0.12)";
+      ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5);
+    }
+    ctx.strokeStyle = "rgba(70,50,10,0.45)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8.5, 8.5, w - 17, h - 17);
+    ctx.fillStyle = "rgba(60,42,6,0.78)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "700 13px 'DM Sans', system-ui, sans-serif";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "3px";
+    ctx.fillText("SCRATCH", w / 2, h / 2 - 8);
+    ctx.font = "500 11px 'DM Sans', system-ui, sans-serif";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "2px";
+    ctx.fillText("TO REVEAL", w / 2, h / 2 + 10);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
+  function paintAll() {
+    cards.forEach(function (e) { if (!e.started && !chosen) paintFoil(e); });
+  }
+
+  function pos(e, canvas) {
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function clearedShare(canvas) {
+    var ctx = canvas.getContext("2d");
+    var w = canvas.width, h = canvas.height;
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var step = 10, clear = 0, total = 0;
+    for (var y = 0; y < h; y += step) {
+      for (var x = 0; x < w; x += step) {
+        total++;
+        if (data[(y * w + x) * 4 + 3] < 128) clear++;
+      }
+    }
+    return total ? clear / total : 0;
+  }
+
+  function choose(entry) {
+    if (chosen) return chosen === entry;
+    chosen = entry;
+    entry.started = true;
+    offerCode = (saved && saved.code) || makeCode();
+    persist({ off: entry.tier.off, code: offerCode });
+    cards.forEach(function (e) {
+      if (e !== entry) { e.card.classList.add("locked"); e.card.removeAttribute("tabindex"); e.card.setAttribute("aria-disabled", "true"); }
+    });
+    statusText.textContent = "Keep scratching to reveal your offer.";
+    return true;
+  }
+
+  function reveal(entry) {
+    entry.card.classList.add("revealed", "winner");
+    entry.card.removeAttribute("role");
+    showResult(entry.tier);
+  }
+
+  function showResult(tier) {
+    statusEl.classList.add("done");
+    statusText.textContent = "Your offer is unlocked.";
+    document.getElementById("resultTitle").textContent = "You unlocked " + tier.off + "% off";
+    document.getElementById("resultBody").textContent =
+      "Valid on any service when your bill is ₹" + fmt(tier.min) +
+      " or more. Message us now to book today's appointment and claim it. Your scratch is now used.";
+    document.getElementById("offerCode").textContent = offerCode;
+    var msg = "Hey, I scratched the card and got " + tier.off + "% off (on a bill of ₹" + fmt(tier.min) +
+      " or more) for today's appointment at Toni&Guy Essensuals West Mambalam. My offer code is " + offerCode + ".";
+    document.getElementById("waBtn").href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(msg);
+    resultEl.classList.add("show");
+  }
+
+  function bind(entry) {
+    var c = entry.canvas;
+    c.addEventListener("pointerdown", function (e) {
+      if (!choose(entry)) return;
+      if (entry.card.classList.contains("revealed")) return;
+      c.setPointerCapture(e.pointerId);
+      entry.drawing = true;
+      entry.last = pos(e, c);
+      stroke(entry, entry.last, entry.last);
+      e.preventDefault();
+    });
+    c.addEventListener("pointermove", function (e) {
+      if (!entry.drawing) return;
+      var p = pos(e, c);
+      stroke(entry, entry.last, p);
+      entry.last = p;
+      var now = Date.now();
+      if (now - entry.lastCheck > 140) {
+        entry.lastCheck = now;
+        if (clearedShare(c) >= THRESHOLD) { entry.drawing = false; reveal(entry); }
+      }
+      e.preventDefault();
+    });
+    function end() {
+      if (!entry.drawing) return;
+      entry.drawing = false;
+      if (clearedShare(c) >= THRESHOLD) reveal(entry);
+    }
+    c.addEventListener("pointerup", end);
+    c.addEventListener("pointercancel", end);
+    entry.card.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      if (!choose(entry)) return;
+      e.preventDefault();
+      reveal(entry);
+    });
+  }
+
+  function stroke(entry, a, b) {
+    var ctx = entry.canvas.getContext("2d");
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 30;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x + 0.01, b.y + 0.01);
+    ctx.stroke();
+  }
+
+  paintAll();
+  var rt;
+  window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(paintAll, 150); });
+
+  // A returning visitor keeps the offer they already scratched.
+  if (saved && typeof saved.off === "number") {
+    var match = cards.filter(function (e) { return e.tier.off === saved.off; })[0];
+    if (match) {
+      chosen = match;
+      match.started = true;
+      offerCode = saved.code || makeCode();
+      persist({ off: match.tier.off, code: offerCode });
+      cards.forEach(function (e) {
+        if (e !== match) { e.card.classList.add("locked"); e.card.removeAttribute("tabindex"); e.card.setAttribute("aria-disabled", "true"); paintFoil(e); }
+      });
+      match.card.classList.add("revealed", "winner");
+      match.card.removeAttribute("role");
+      showResult(match.tier);
+      statusText.textContent = "You have already used your scratch. Here is your offer.";
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
